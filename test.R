@@ -1,99 +1,76 @@
-# load packages
-library(metabom8)
-
-
-
-#Load data from github
-data <- read.csv("https://raw.githubusercontent.com/aeiwz/urine_metabolite_example/main/data/human_cachexia.csv")
-
-#Data manipulation
-rownames(data) <- data$Patient.ID
-
-
-# Declare variables
-X<-data[, 3:ncol(data)]
-dim(X)
-
-# get column names of X to list
-metabolite<-colnames(X) 
-length(metabolite)
-
-
-meta<-data[,1:2]  # spectrometer metadata
-dim(meta)
-
-
-an<-meta      # sample annotation
-dim(an)
-
-
-# list all environment varaibales
-ls()
-
-# Perform PCA
-pca_model=pca(X=X, pc=2, scale='UV', center=TRUE)
-
-# Plot PCA results: scores of the first two components
-plotscores(obj=pca_model, pc=c(1,2), an=list(Intervention=meta$Muscle.loss), title='PCA - Scores plot')
-
-# define scores that should be labelled
-idx<-which(pca_model@t[,1]>10)
-
-# construct label vector with mouse IDs
-outliers<-rep('', nrow(an))
-outliers[idx]<-an$Patient.ID[idx]
-
-# Plot PCA scores, colour according to class, point shape according to time of sample collection and label outliers
-plotscores(obj=pca_model, pc=c(1,2), an=list(
-  Class=an$Muscle.loss,         # point colour
-  ID=outliers),           # point label
-  title='PCA - Scores plot')
-
-# Plot PCA scores, colour according to class, point shape according to time of sample collection and label outliers
-plotscores(obj=pca_model, pc=c(1,2), an=list(
-  Class=an$Muscle.loss,         # point colour
-  Timepoint=an$Muscle.loss, # point shape
-  ID=outliers),           # point label
-  title='PCA - Scores plot')
-
-
-# Plot PCA loadings
-plotloadings(obj=pca_model, pc=c(1,2), metabolite=metabolite, title='PCA - Loadings plot')
-
-
-
-
-
-# Load necessary libraries
-library(readr)
+# Step 1: Load the necessary libraries
+library(tidyverse)
 library(ggplot2)
-library(ggfortify)  # For visualizing PCA
-library(dplyr)
+library(ggfortify)  # Useful for creating biplots
+library(readr)
 
-# Read the CSV file directly from the URL
+# Step 2: Load the data
 url <- "https://raw.githubusercontent.com/aeiwz/urine_metabolite_example/main/data/human_cachexia.csv"
 data <- read_csv(url)
 
-# Check the structure of the data
-str(data)
+# Step 3: Rename the column to remove space (if needed)
+data <- data %>% rename(Muscle_loss = `Muscle loss`)
 
-# Optional: Remove non-numeric columns (e.g., sample IDs or labels) if present
-# Assuming the first column is non-numeric (e.g., sample names), you can remove it like this:
-data_numeric <- data %>%
-  select_if(is.numeric)
+# Step 4: Prepare the data for PCA
+pca_data <- data[,3:ncol(data)]
+# Ensure 'Muscle_loss' is a factor
+data$Muscle_loss <- as.factor(data$Muscle_loss)
 
-# Perform PCA analysis
-pca_result <- prcomp(data_numeric, scale. = TRUE)
+# Step 5: Perform PCA
+pca_result <- prcomp(pca_data, scale. = TRUE)
 
-# Summary of PCA to check variance explained by each principal component
-summary(pca_result)
+# Step 6: Extract PCA scores
+pca_scores <- as.data.frame(pca_result$x)
 
-# Visualize PCA
-autoplot(pca_result, data = data, colour = 'group') +
+# Combine PCA scores with the original metadata
+pca_scores <- cbind(pca_scores, Muscle_loss = data$Muscle_loss)
+
+# Step 7: Plot PCA scores (PC1 vs PC2)
+score_plot <- ggplot(pca_scores, aes(x = PC1, y = PC2, color = Muscle_loss)) +
+  geom_point(size = 3) +
   theme_minimal() +
-  labs(title = "PCA of Human Cachexia Data")
+  labs(title = "PCA Score Plot",
+       x = "Principal Component 1",
+       y = "Principal Component 2") +
+  scale_color_manual(values = c("blue", "red"))  # Customize colors as needed
 
-# You can replace 'group' with the actual column name that contains the grouping variable
+# Display the PCA score plot
+print(score_plot)
+
+# Step 8: Create a biplot
+biplot(pca_result, scale = 0, col = c("blue", "red"))
+
+# Optional: Custom biplot using ggplot2 and ggbiplot package
+# Uncomment the following if you prefer a custom biplot (requires ggbiplot package)
+# library(ggbiplot)
+# ggbiplot(pca_result, obs.scale = 1, var.scale = 1,
+#          groups = data$Muscle_loss, ellipse = TRUE, circle = TRUE) +
+#  scale_color_manual(values = c("blue", "red")) +
+#  theme_minimal() +
+#  labs(title = "PCA Biplot", x = "PC1", y = "PC2")
+
+
+
+#T-test all feature
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
